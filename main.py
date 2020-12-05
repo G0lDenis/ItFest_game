@@ -4,99 +4,75 @@ import sqlite3
 
 
 def init_main_screen(screen):
+    global bt_close
     screen.fill((0, 0, 0))
-    show_start_menu(screen)
+    bt_close = Button(r'Images\close button 2.png', 0.93, 0.03)
+    sprites.add(bt_close)
+    show_game(screen, present_screen)
 
 
 def init_game_screen(screen):
     global present_screen
+    global sprites
     screen.fill((0, 0, 0))
     show_game(screen, present_screen)
 
 
-def show_start_menu(screen):
-    global button_start
-    global button_setup
-    global sprites
-    con = sqlite3.connect('maps.db')
-    cur = con.cursor()
-    bg_way = cur.execute("""SELECT * FROM Images
-    WHERE screen_id = 1 and type = 'bg'""").fetchone()
-    image_bg_menu = pygame.image.load(bg_way[2]).convert()
-    image_bg_menu = pygame.transform.scale(image_bg_menu, screen.get_size())
-    rect = image_bg_menu.get_rect()
-    rect.center = (image_bg_menu.get_size()[0] // 2,
-                   image_bg_menu.get_size()[1] // 2)
-    screen.blit(image_bg_menu, rect)
-    bt1 = cur.execute("""SELECT * FROM Images
-        WHERE screen_id = 1 and type = 'bt1'""").fetchone()
-    button_start = Button(bt1[2], 'bt1')
-    sprites.add(button_start)
-    bt2 = cur.execute("""SELECT * FROM Images
-            WHERE screen_id = 1 and type = 'bt2'""").fetchone()
-    button_setup = Button(bt2[2], 'bt2')
-    sprites.add(button_setup)
-    sprites.draw(screen)
-
-
 def show_game(screen, present_screen):
     global sprites
+    global bt1
+    global bt2
     con = sqlite3.connect('maps.db')
     cur = con.cursor()
-    bg_way = cur.execute(f"""SELECT * FROM Images
-        WHERE screen_id = {present_screen} and type = 'bg'""").fetchone()
+    bg_way = cur.execute(f"""SELECT * FROM Backs
+        WHERE screen_id = {present_screen}""").fetchone()
     image_bg_menu = pygame.image.load(bg_way[2]).convert()
     image_bg_menu = pygame.transform.scale(image_bg_menu, screen.get_size())
     rect = image_bg_menu.get_rect()
     rect.center = (image_bg_menu.get_size()[0] // 2,
                    image_bg_menu.get_size()[1] // 2)
     screen.blit(image_bg_menu, rect)
-    bt1 = cur.execute(f"""SELECT * FROM Images
-            WHERE screen_id = {present_screen} and type = 'bt1'""").fetchone()
+    bt1 = cur.execute(f"""SELECT * FROM Buttons
+            WHERE screen_id = {present_screen}""").fetchone()
+    sprites.draw(screen)
     if bt1:
-        button_start = Button(bt1[2], 'bt1')
-        sprites.add(button_start)
-        bt2 = cur.execute(f"""SELECT * FROM Images
-                    WHERE screen_id = {present_screen} and type = 'bt2'""").fetchone()
-        button_setup = Button(bt2[2], 'bt2')
-        sprites.add(button_setup)
+        bt1 = Button(bt1[2], bt1[3], bt1[4])
+        sprites.add(bt1)
+        bt2 = cur.execute(f"""SELECT * FROM Buttons
+                    WHERE screen_id = {present_screen}""").fetchall()[1]
+        bt2 = Button(bt2[2], bt2[3], bt2[4])
+        sprites.add(bt2)
         sprites.draw(screen)
     else:
         clock = pygame.time.Clock()
         clock.tick(1000)
-        print('++++++')
 
 
 def process_event(screen):
     global running
     global present_screen
-    global button_start
-    global button_setup
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
-            with open('present screen.csv', 'w', newline='') as file:
-                writer = csv.writer(file, delimiter=';', quotechar='"')
-                writer.writerow([str(present_screen) if present_screen != 1 else saved_screen])
             running = False
         if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
             if present_screen == 1:
-                if button_start.rect.collidepoint(event.pos):
+                if bt1.rect.collidepoint(event.pos):
                     game_start()
-                if button_setup.rect.collidepoint(event.pos):
+                if bt2.rect.collidepoint(event.pos):
                     open_settings()
-            else:
-                pass
+            if bt_close.rect.collidepoint(event.pos):
+                running = False
 
 
 def game_start():
     global screen
     global present_screen
-    global button_start
-    global button_setup
-    button_start.kill()
-    button_start.remove()
-    button_setup.kill()
-    button_setup.remove()
+    global bt1
+    global bt2
+    bt1.kill()
+    bt1.remove()
+    bt2.kill()
+    bt2.remove()
     present_screen = saved_screen
     show_game(screen, present_screen)
 
@@ -107,21 +83,18 @@ def open_settings():
 
 
 class Button(pygame.sprite.Sprite):
-    def __init__(self, bt_name, num):
+    def __init__(self, bt_name, cen_x, cen_y):
         super().__init__()
-        self.num = num
+        self.cen_x = cen_x
+        self.cen_y = cen_y
         self.image = pygame.image.load(bt_name).convert()
         self.image.set_colorkey((255, 255, 255))
         self.rect = self.image.get_rect(center=self.rect_center())
 
     def rect_center(self):
         global screen
-        if self.num == 'bt1':
-            return (0.3 * screen.get_size()[0] + self.image.get_size()[0] // 2,
-                    0.4 * screen.get_size()[1] + self.image.get_size()[1] // 2)
-        else:
-            return (0.6 * screen.get_size()[0] + self.image.get_size()[0] // 2,
-                    0.4 * screen.get_size()[1] + self.image.get_size()[1] // 2)
+        return (self.cen_x * screen.get_size()[0] + self.image.get_size()[0] // 2,
+                self.cen_y * screen.get_size()[1] + self.image.get_size()[1] // 2)
 
 
 if __name__ == '__main__':
@@ -130,8 +103,9 @@ if __name__ == '__main__':
     with open('present screen.csv') as file:
         reader = csv.reader(file, delimiter=';', quotechar='"')
         saved_screen = int(list(reader)[0][0])
-    button_start = None
-    button_setup = None
+    bt1 = None
+    bt2 = None
+    bt_close = None
     first_character = None
     second_character = None
     present_screen = 1
@@ -141,4 +115,7 @@ if __name__ == '__main__':
     while running:
         process_event(screen)
         pygame.display.flip()
+    with open('present screen.csv', 'w', newline='') as file:
+        writer = csv.writer(file, delimiter=';', quotechar='"')
+        writer.writerow([str(present_screen) if present_screen != 1 else saved_screen])
     pygame.quit()
