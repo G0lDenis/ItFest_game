@@ -44,8 +44,17 @@ def show_game(screen, present_screen):
         sprites.add(bt2)
         sprites.draw(screen)
     else:
-        clock = pygame.time.Clock()
-        clock.tick(1000)
+        texts = cur.execute(f"""SELECT * FROM Texts
+                    WHERE screen_id = {present_screen}""").fetchall()
+        texts.sort(key=lambda i: i[2])
+        for i in texts:
+            im = Button(i[3], 0.5, 0.1)
+            sprites.add(im)
+            sprites.draw(screen)
+            clock = pygame.time.Clock()
+            clock.tick(1000)
+            im.kill()
+            im.remove()
 
 
 def process_event(screen):
