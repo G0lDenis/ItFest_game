@@ -128,3 +128,5 @@ if __name__ == '__main__':
         writer = csv.writer(file, delimiter=';', quotechar='"')
         writer.writerow([str(present_screen) if present_screen != 1 else saved_screen])
     pygame.quit()
+
+print('hellow')
