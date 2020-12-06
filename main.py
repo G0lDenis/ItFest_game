@@ -5,12 +5,15 @@ import sqlite3
 
 def init_main_screen(screen):
     global bt_close
+    global click
+    click = pygame.mixer.Sound('snd/click.mp3')
     screen.fill((0, 0, 0))
     bt_close = Button(r'Images\close button 2.png', 0.93, 0.03)
     sprites.add(bt_close)
     show_game(screen, present_screen)
     pygame.mixer.music.load('snd/background_snd_1.mp3')
     pygame.mixer.music.play(-1)
+
 
 def init_game_screen(screen):
     global present_screen
@@ -60,11 +63,13 @@ def show_game(screen, present_screen):
 
 def process_event(screen):
     global running
+    global click
     global present_screen
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
             running = False
         if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
+            pygame.mixer.Sound.play(click)
             if present_screen == 1:
                 if bt1.rect.collidepoint(event.pos):
                     game_start()
@@ -90,6 +95,14 @@ def game_start():
 def open_settings():
     global screen
     global present_screen
+    global bt1
+    global bt2
+    bt1.kill()
+    bt1.remove()
+    bt2.kill()
+    bt2.remove()
+    present_screen = saved_screen
+    show_game(screen, present_screen)
 
 
 class Button(pygame.sprite.Sprite):
@@ -130,4 +143,3 @@ if __name__ == '__main__':
         writer.writerow([str(present_screen) if present_screen != 1 else saved_screen])
     pygame.quit()
 
-print('hellow')
