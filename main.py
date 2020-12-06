@@ -52,7 +52,7 @@ def show_game(screen, present_screen):
             sprites.add(im)
             sprites.draw(screen)
             clock = pygame.time.Clock()
-            clock.tick(1000)
+            clock.tick(5000)
             im.kill()
             im.remove()
 
