@@ -9,7 +9,8 @@ def init_main_screen(screen):
     bt_close = Button(r'Images\close button 2.png', 0.93, 0.03)
     sprites.add(bt_close)
     show_game(screen, present_screen)
-
+    pygame.mixer.music.load('snd/background_snd_1.mp3')
+    pygame.mixer.music.play(-1)
 
 def init_game_screen(screen):
     global present_screen
