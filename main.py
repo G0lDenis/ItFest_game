@@ -18,6 +18,7 @@ def show_game(screen):
     global sprites
     global bt1
     global bt2
+    global bt3
     global first_character
     global second_character
     global present_screen
@@ -52,6 +53,11 @@ def show_game(screen):
                     WHERE bg_id = {present_screen}""").fetchall()[1]
         bt2 = Rectangle(bt2[2], bt2[3], bt2[4])
         sprites.add(bt2)
+        bt = cur.execute(f"""SELECT * FROM Buttons
+                    WHERE bg_id = {present_screen}""").fetchall()
+        if len(bt) > 2:
+            bt3 = Rectangle(bt[2][2], bt[2][3], bt[2][4])
+            sprites.add(bt3)
         sprites.draw(screen)
     else:
         texts = cur.execute(f"""SELECT * FROM Texts
@@ -75,6 +81,11 @@ def show_game(screen):
             im.remove()
             present_screen = 3
             show_game(screen)
+    if present_screen == 9 or present_screen == 10 or present_screen == 11 or present_screen == 12 or \
+            present_screen == 13:
+        with open('present screen.csv', 'w', newline='') as file:
+            writer = csv.writer(file, delimiter=';', quotechar='"')
+            writer.writerow('2')
 
 
 def process_event(screen):
@@ -91,11 +102,18 @@ def process_event(screen):
                     game_start()
                 if bt2.rect.collidepoint(event.pos):
                     open_settings()
+            elif present_screen == 13:
+                if bt1.rect.collidepoint(event.pos):
+                    pygame.mixer.music.set_volume(pygame.mixer.music.get_volume() + 0.1)
+                if bt2.rect.collidepoint(event.pos):
+                    pygame.mixer.music.set_volume(pygame.mixer.music.get_volume() - 0.1)
+                if bt3.rect.collidepoint(event.pos):
+                    present_screen = 1
+                    update_screen()
             else:
                 con = sqlite3.connect('maps.db')
                 cur = con.cursor()
                 if bt1.rect.collidepoint(event.pos):
-                    print(present_screen)
                     bt = cur.execute(f"""SELECT * FROM Buttons
                             WHERE bg_id = {present_screen}""").fetchall()[0]
                     present_screen = bt[5]
@@ -115,12 +133,16 @@ def update_screen():
     global present_screen
     global bt1
     global bt2
+    global bt3
     global first_character
     global second_character
     bt1.kill()
     bt1.remove()
     bt2.kill()
     bt2.remove()
+    if bt3:
+        bt3.kill()
+        bt3.remove()
     if first_character:
         first_character.kill()
         first_character.remove()
@@ -131,6 +153,9 @@ def update_screen():
 
 def game_start():
     global present_screen
+    with open('present screen.csv') as file:
+        reader = csv.reader(file, delimiter=';', quotechar='"')
+        saved_screen = int(list(reader)[0][0])
     present_screen = saved_screen
     update_screen()
 
@@ -138,6 +163,8 @@ def game_start():
 def open_settings():
     global screen
     global present_screen
+    present_screen = 13
+    update_screen()
 
 
 class Rectangle(pygame.sprite.Sprite):
@@ -158,14 +185,15 @@ class Rectangle(pygame.sprite.Sprite):
 if __name__ == '__main__':
     pygame.init()
     running = True
-    with open('present screen.csv') as file:
-        reader = csv.reader(file, delimiter=';', quotechar='"')
-        saved_screen = int(list(reader)[0][0])
     bt1 = None
     bt2 = None
+    bt3 = None
     bt_close = None
     first_character = None
     second_character = None
+    with open('present screen.csv') as file:
+        reader = csv.reader(file, delimiter=';', quotechar='"')
+        saved_screen = int(list(reader)[0][0])
     click = pygame.mixer.Sound('snd/click.mp3')
     present_screen = 1
     sprites = pygame.sprite.Group()
@@ -176,5 +204,5 @@ if __name__ == '__main__':
         pygame.display.flip()
     with open('present screen.csv', 'w', newline='') as file:
         writer = csv.writer(file, delimiter=';', quotechar='"')
-        writer.writerow([str(present_screen) if present_screen != 1 else saved_screen])
+        writer.writerow([str(present_screen) if present_screen != 1 and present_screen != 13 else str(saved_screen)])
     pygame.quit()
