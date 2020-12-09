@@ -21,6 +21,9 @@ def init_main_screen(screen):
     if bt3:
         bt3.kill()
         bt3.remove()
+    if first_character:
+        first_character.kill()
+        second_character.kill()
     bt1, bt2, bt3 = None, None, None
     with open('present screen.csv') as file:
         reader = csv.reader(file, delimiter=';', quotechar='"')
@@ -94,6 +97,47 @@ def init_settings_screen(screen):
     pygame.display.flip()
 
 
+def init_death_or_win_screen(screen):
+    global bt1
+    global bt2
+    global bt3
+    global present_screen
+    global sprites
+    global bt1
+    global bt2
+    global bt3
+    global first_character
+    global second_character
+    if first_character:
+        first_character.kill()
+        second_character.kill()
+    bt1.kill()
+    bt1.remove()
+    bt2.kill()
+    bt2.remove()
+    con = sqlite3.connect('maps.db')
+    cur = con.cursor()
+    bg_way = cur.execute(f"""SELECT * FROM Backs
+                    WHERE id = {present_screen}""").fetchone()
+    image_bg_menu = pygame.image.load(bg_way[1]).convert()
+    image_bg_menu = pygame.transform.scale(image_bg_menu, screen.get_size())
+    rect = image_bg_menu.get_rect()
+    rect.center = (image_bg_menu.get_size()[0] // 2,
+                   image_bg_menu.get_size()[1] // 2)
+    screen.blit(image_bg_menu, rect)
+    bt1 = cur.execute(f"""SELECT * FROM Buttons
+                                    WHERE bg_id = {present_screen}""").fetchone()
+    bt1 = Rectangle(bt1[2], bt1[3], bt1[4])
+    sprites.add(bt1)
+    bt2 = cur.execute(f"""SELECT * FROM Buttons
+                                            WHERE bg_id = {present_screen}""").fetchall()[1]
+    bt2 = Rectangle(bt2[2], bt2[3], bt2[4])
+    sprites.add(bt2)
+    sprites.draw(screen)
+    print(bt1, bt2)
+    pygame.display.flip()
+
+
 def show_game(screen):
     global sprites
     global bt1
@@ -105,6 +149,11 @@ def show_game(screen):
     global present_screen
     global now_text
     global running
+    global image_bg_menu
+    global rect
+    if first_character:
+        first_character.kill()
+        second_character.kill()
     con = sqlite3.connect('maps.db')
     cur = con.cursor()
     bg_way = cur.execute(f"""SELECT * FROM Backs
@@ -130,14 +179,13 @@ def show_game(screen):
     texts = cur.execute(f"""SELECT * FROM Texts
                 WHERE bg_id = {present_screen}""").fetchall()
     texts.sort(key=lambda i: i[2])
-    now_text = texts
+    now_text = texts.copy()
     for i in texts:
         im = Rectangle(i[3], 0.3, 0.05)
         sprites.add(im)
         sprites.draw(screen)
         pygame.display.flip()
         if i[4]:
-            print(present_screen, i[4])
             bt1 = cur.execute(f"""SELECT * FROM Buttons
                         WHERE bg_id = {present_screen}""").fetchone()
             bt1 = Rectangle(bt1[2], bt1[3], bt1[4])
@@ -146,36 +194,56 @@ def show_game(screen):
                                 WHERE bg_id = {present_screen}""").fetchall()[1]
             bt2 = Rectangle(bt2[2], bt2[3], bt2[4])
             sprites.add(bt2)
-            bt = cur.execute(f"""SELECT * FROM Buttons
-                                WHERE bg_id = {present_screen}""").fetchall()
-            if len(bt) > 2:
-                bt3 = Rectangle(bt[2][2], bt[2][3], bt[2][4])
-                sprites.add(bt3)
             sprites.draw(screen)
-            ends_texts = texts.index(i)
-        else:
-            clock = pygame.time.Clock()
-            for t in range(10):
-                clock.tick(2)
             im.kill()
             im.remove()
-            screen.blit(image_bg_menu, rect)
-            pygame.display.update()
+            del now_text[now_text.index(i)]
+            break
+        else:
+            sleep(5)
+            im.kill()
+            im.remove()
+            if texts.index(i) != len(texts) - 1:
+                screen.blit(image_bg_menu, rect)
+                pygame.display.update()
+            del now_text[now_text.index(i)]
+
     if present_screen == 2:
         present_screen = 3
         show_game(screen)
+    if present_screen == 5:
+        present_screen = 10
+        init_death_or_win_screen(screen)
+    if present_screen == 7:
+        dt = cur.execute(f"""SELECT death FROM Buttons
+                        WHERE bg_id = 4""").fetchone()
+        if dt[0]:
+            present_screen = 11
+            init_death_or_win_screen(screen)
 
 
 def continue_texts(screen):
     global now_text
+    global sprites
+    global image_bg_menu
+    global rect
+    pygame.display.flip()
+    if bt1:
+        bt1.kill()
+        bt1.remove()
+        bt2.kill()
+        bt2.remove()
     for i in now_text:
+        screen.blit(image_bg_menu, rect)
         im = Rectangle(i[3], 0.3, 0.05)
         sprites.add(im)
         sprites.draw(screen)
+        pygame.display.flip()
         sleep(5)
         im.kill()
         im.remove()
-    show_game(screen)
+    pygame.display.flip()
+    update_screen()
 
 
 def process_event(screen):
@@ -186,6 +254,7 @@ def process_event(screen):
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
             running = False
+            return
         if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
             pygame.mixer.Sound.play(click)
             if bt_close.rect.collidepoint(event.pos):
@@ -207,16 +276,47 @@ def process_event(screen):
             else:
                 con = sqlite3.connect('maps.db')
                 cur = con.cursor()
+                print(bt1.rect.collidepoint(event.pos), bt1)
                 if bt1.rect.collidepoint(event.pos):
+                    print('+++++++')
                     bt = cur.execute(f"""SELECT * FROM Buttons
                             WHERE bg_id = {present_screen}""").fetchall()[0]
-                    present_screen = bt[5]
-                    continue_texts(screen)
+                    if 9 <= present_screen <= 12 or present_screen == 14:
+                        present_screen = bt[5]
+                        update_screen()
+                    elif 9 <= bt[5] <= 12 or present_screen == 14:
+                        present_screen = bt[5]
+                        print(present_screen)
+                        init_death_or_win_screen(screen)
+                        save_progress(2)
+                    else:
+                        present_screen = bt[5]
+                        continue_texts(screen)
                 elif bt2.rect.collidepoint(event.pos):
                     bt = cur.execute(f"""SELECT * FROM Buttons
                             WHERE bg_id = {present_screen}""").fetchall()[1]
-                    present_screen = bt[5]
-                    continue_texts(screen)
+                    if 9 <= present_screen <= 12 or present_screen == 14:
+                        present_screen = 1
+                        init_main_screen(screen)
+                    elif 9 <= bt[5] <= 12 or present_screen == 14:
+                        print('------')
+                        present_screen = bt[5]
+                        init_death_or_win_screen(screen)
+                        save_progress(2)
+                    else:
+                        if present_screen == 4:
+                            cur.execute(f'''UPDATE Buttons SET death=1 WHERE bg_id=4''')
+                        else:
+                            cur.execute(f'''UPDATE Buttons SET death=0 WHERE bg_id=4''')
+                        con.commit()
+                        present_screen = bt[5]
+                        continue_texts(screen)
+
+
+def save_progress(sc):
+    with open('present screen.csv', 'w', newline='') as file:
+        writer = csv.writer(file, delimiter=';', quotechar='"')
+        writer.writerow([str(sc)])
 
 
 def update_screen():
@@ -227,11 +327,11 @@ def update_screen():
     global bt3
     global first_character
     global second_character
-    bt1.kill()
-    bt1.remove()
-    bt2.kill()
-    bt2.remove()
-    bt1, bt2, bt3 = None, None, None
+    if bt1:
+        bt1.kill()
+        bt1.remove()
+        bt2.kill()
+        bt2.remove()
     if bt3:
         bt3.kill()
         bt3.remove()
@@ -268,6 +368,8 @@ if __name__ == '__main__':
     ends_texts = 0
     first_character = None
     second_character = None
+    image_bg_menu = None
+    rect = None
     now_text = []
     saved_screen = 0
     click = pygame.mixer.Sound('snd/click.mp3')
@@ -278,7 +380,6 @@ if __name__ == '__main__':
     while running:
         process_event(screen)
         pygame.display.flip()
-    with open('present screen.csv', 'w', newline='') as file:
-        writer = csv.writer(file, delimiter=';', quotechar='"')
-        writer.writerow([str(present_screen) if present_screen != 1 and present_screen != 13 else str(saved_screen)])
+    if 2 <= present_screen <= 8:
+        save_progress(present_screen)
     pygame.quit()
