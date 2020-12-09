@@ -134,7 +134,6 @@ def init_death_or_win_screen(screen):
     bt2 = Rectangle(bt2[2], bt2[3], bt2[4])
     sprites.add(bt2)
     sprites.draw(screen)
-    print(bt1, bt2)
     pygame.display.flip()
 
 
@@ -228,7 +227,7 @@ def continue_texts(screen):
     global image_bg_menu
     global rect
     pygame.display.flip()
-    if bt1:
+    if bt1 and now_text:
         bt1.kill()
         bt1.remove()
         bt2.kill()
@@ -276,9 +275,7 @@ def process_event(screen):
             else:
                 con = sqlite3.connect('maps.db')
                 cur = con.cursor()
-                print(bt1.rect.collidepoint(event.pos), bt1)
                 if bt1.rect.collidepoint(event.pos):
-                    print('+++++++')
                     bt = cur.execute(f"""SELECT * FROM Buttons
                             WHERE bg_id = {present_screen}""").fetchall()[0]
                     if 9 <= present_screen <= 12 or present_screen == 14:
@@ -286,7 +283,6 @@ def process_event(screen):
                         update_screen()
                     elif 9 <= bt[5] <= 12 or present_screen == 14:
                         present_screen = bt[5]
-                        print(present_screen)
                         init_death_or_win_screen(screen)
                         save_progress(2)
                     else:
@@ -299,7 +295,6 @@ def process_event(screen):
                         present_screen = 1
                         init_main_screen(screen)
                     elif 9 <= bt[5] <= 12 or present_screen == 14:
-                        print('------')
                         present_screen = bt[5]
                         init_death_or_win_screen(screen)
                         save_progress(2)
